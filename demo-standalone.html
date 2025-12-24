@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PMI Certification Map - Démo</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(to right, #003E6B, #00A3E0);
+            color: white;
+            padding: 1rem 2rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .header h1 {
+            font-size: 1.5rem;
+            margin-bottom: 0.25rem;
+        }
+        .header p {
+            font-size: 0.875rem;
+            opacity: 0.9;
+        }
+        .container {
+            display: flex;
+            height: calc(100vh - 100px);
+        }
+        .sidebar {
+            width: 320px;
+            background: #f9fafb;
+            overflow-y: auto;
+            padding: 1.5rem;
+            border-right: 1px solid #e5e7eb;
+        }
+        .panel {
+            background: white;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .panel h2 {
+            color: #003E6B;
+            font-size: 1.25rem;
+            margin-bottom: 1rem;
+        }
+        .stat-box {
+            background: linear-gradient(to right, #003E6B, #00A3E0);
+            color: white;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+        .stat-box .label {
+            font-size: 0.875rem;
+            opacity: 0.9;
+        }
+        .stat-box .value {
+            font-size: 2rem;
+            font-weight: bold;
+            margin-top: 0.5rem;
+        }
+        .country-item {
+            padding: 0.75rem;
+            border-radius: 6px;
+            margin-bottom: 0.5rem;
+            cursor: pointer;
+            transition: background 0.2s;
+            background: #f9fafb;
+        }
+        .country-item:hover {
+            background: #f3f4f6;
+        }
+        .country-rank {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 2rem;
+            height: 2rem;
+            border-radius: 50%;
+            background: linear-gradient(to bottom right, #F15A22, #003E6B);
+            color: white;
+            font-weight: bold;
+            font-size: 0.875rem;
+            margin-right: 0.75rem;
+        }
+        .map-container {
+            flex: 1;
+            padding: 1.5rem;
+        }
+        #map {
+            width: 100%;
+            height: 100%;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .legend {
+            position: absolute;
+            bottom: 2rem;
+            left: 2rem;
+            background: white;
+            padding: 1rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            z-index: 1000;
+        }
+        .legend h3 {
+            font-size: 0.875rem;
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 0.5rem;
+            font-size: 0.75rem;
+        }
+        .legend-color {
+            width: 1rem;
+            height: 1rem;
+            border-radius: 50%;
+            border: 2px solid white;
+            margin-right: 0.5rem;
+        }
+        .footer {
+            background: white;
+            border-top: 1px solid #e5e7eb;
+            padding: 0.75rem 2rem;
+            font-size: 0.875rem;
+            color: #6b7280;
+            display: flex;
+            justify-content: space-between;
+        }
+        .detail-panel {
+            position: fixed;
+            right: -500px;
+            top: 0;
+            width: 500px;
+            height: 100vh;
+            background: white;
+            box-shadow: -4px 0 12px rgba(0,0,0,0.15);
+            transition: right 0.3s;
+            z-index: 2000;
+            overflow-y: auto;
+        }
+        .detail-panel.open {
+            right: 0;
+        }
+        .detail-header {
+            background: linear-gradient(to right, #003E6B, #00A3E0);
+            color: white;
+            padding: 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+        .close-btn {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 4px;
+            width: 2.5rem;
+            height: 2.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .close-btn:hover {
+            background: rgba(255,255,255,0.3);
+        }
+        .detail-content {
+            padding: 1.5rem;
+        }
+        .chart-container {
+            background: #f9fafb;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>PMI Certification Map</h1>
+        <p>Répartition mondiale des certifications PMI</p>
+    </div>
+
+    <div class="container">
+        <aside class="sidebar">
+            <div class="panel">
+                <h2>Statistiques Mondiales</h2>
+                <div class="stat-box">
+                    <div class="label">Total mondial</div>
+                    <div class="value" id="global-total">0</div>
+                    <div class="label">certifications actives</div>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div style="background: #f9fafb; padding: 1rem; border-radius: 8px;">
+                        <div style="color: #6b7280; font-size: 0.875rem;">Pays</div>
+                        <div style="color: #003E6B; font-size: 1.5rem; font-weight: bold; margin-top: 0.5rem;" id="countries-count">0</div>
+                    </div>
+                    <div style="background: #f9fafb; padding: 1rem; border-radius: 8px;">
+                        <div style="color: #6b7280; font-size: 0.875rem;">Types</div>
+                        <div style="color: #003E6B; font-size: 1.5rem; font-weight: bold; margin-top: 0.5rem;" id="types-count">0</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel">
+                <h2>Top 10 Pays</h2>
+                <div id="top-countries"></div>
+            </div>
+        </aside>
+
+        <main class="map-container">
+            <div id="map"></div>
+            <div class="legend">
+                <h3>Nombre de certifications</h3>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #99000d;"></div>
+                    <span>Très élevé</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #cb181d;"></div>
+                    <span>Élevé</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #ef3b2c;"></div>
+                    <span>Moyen</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #fb6a4a;"></div>
+                    <span>Faible</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #fcbba1;"></div>
+                    <span>Très faible</span>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <div class="detail-panel" id="detail-panel">
+        <div class="detail-header">
+            <div>
+                <h2 id="detail-country-name">Pays</h2>
+                <div style="font-size: 0.875rem; opacity: 0.9;" id="detail-country-code">XX</div>
+                <div style="margin-top: 1rem; background: rgba(255,255,255,0.1); padding: 1rem; border-radius: 8px;">
+                    <div style="font-size: 0.875rem; opacity: 0.9;">Total de certifications</div>
+                    <div style="font-size: 2rem; font-weight: bold; margin-top: 0.5rem;" id="detail-total">0</div>
+                </div>
+            </div>
+            <button class="close-btn" onclick="closeDetail()">×</button>
+        </div>
+        <div class="detail-content">
+            <h3 style="margin-bottom: 1rem;">Répartition par certification</h3>
+            <div class="chart-container">
+                <canvas id="detail-chart" width="400" height="300"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        <div>Données source: <a href="https://www.pmi.org/certifications/certification-resources/registry" target="_blank" style="color: #00A3E0;">PMI Certification Registry</a></div>
+        <div>Développé avec ❤ pour la communauté PMI</div>
+    </div>
+
+    <script>
+        // Données
+        const countries = [
+            { country_code: 'US', country_name: 'United States', lat: 37.0902, lng: -95.7129, total: 47280, by_cert_type: { PMP: 35000, 'PMI-ACP': 8000, 'PMI-RMP': 2000, 'PMI-SP': 1050, PgMP: 720, PfMP: 200, CAPM: 4500 } },
+            { country_code: 'IN', country_name: 'India', lat: 20.5937, lng: 78.9629, total: 31580, by_cert_type: { PMP: 22000, 'PMI-ACP': 5000, 'PMI-RMP': 1000, CAPM: 3200, PgMP: 380 } },
+            { country_code: 'CN', country_name: 'China', lat: 35.8617, lng: 104.1954, total: 26200, by_cert_type: { PMP: 19500, 'PMI-ACP': 4200, CAPM: 2500 } },
+            { country_code: 'GB', country_name: 'United Kingdom', lat: 55.3781, lng: -3.4360, total: 12530, by_cert_type: { PMP: 9200, 'PMI-ACP': 2400, 'PMI-RMP': 650, PgMP: 280 } },
+            { country_code: 'CA', country_name: 'Canada', lat: 56.1304, lng: -106.3468, total: 12230, by_cert_type: { PMP: 8500, 'PMI-ACP': 2100, 'PMI-RMP': 480, CAPM: 1150 } },
+            { country_code: 'DE', country_name: 'Germany', lat: 51.1657, lng: 10.4515, total: 8870, by_cert_type: { PMP: 6800, 'PMI-ACP': 1650, 'PMI-RMP': 420 } },
+            { country_code: 'AU', country_name: 'Australia', lat: -25.2744, lng: 133.7751, total: 7700, by_cert_type: { PMP: 5900, 'PMI-ACP': 1450, 'PMI-RMP': 350 } },
+            { country_code: 'BR', country_name: 'Brazil', lat: -14.2350, lng: -51.9253, total: 6550, by_cert_type: { PMP: 4650, 'PMI-ACP': 1150, CAPM: 750 } },
+            { country_code: 'JP', country_name: 'Japan', lat: 36.2048, lng: 138.2529, total: 5630, by_cert_type: { PMP: 4100, 'PMI-ACP': 950, CAPM: 580 } },
+            { country_code: 'SG', country_name: 'Singapore', lat: 1.3521, lng: 103.8198, total: 4600, by_cert_type: { PMP: 3500, 'PMI-ACP': 880, 'PMI-RMP': 220 } },
+            { country_code: 'AE', country_name: 'United Arab Emirates', lat: 23.4241, lng: 53.8478, total: 4000, by_cert_type: { PMP: 3100, 'PMI-ACP': 720, 'PMI-RMP': 180 } },
+            { country_code: 'FR', country_name: 'France', lat: 46.2276, lng: 2.2137, total: 3880, by_cert_type: { PMP: 2500, 'PMI-ACP': 800, 'PMI-RMP': 200, CAPM: 380 } },
+            { country_code: 'NL', country_name: 'Netherlands', lat: 52.1326, lng: 5.2913, total: 3300, by_cert_type: { PMP: 2650, 'PMI-ACP': 650 } },
+            { country_code: 'CH', country_name: 'Switzerland', lat: 46.8182, lng: 8.2275, total: 2530, by_cert_type: { PMP: 2050, 'PMI-ACP': 480 } },
+            { country_code: 'BE', country_name: 'Belgium', lat: 50.5039, lng: 4.4699, total: 1680, by_cert_type: { PMP: 1350, 'PMI-ACP': 330 } }
+        ];
+
+        // Initialiser la carte
+        const map = L.map('map').setView([20, 0], 2);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors',
+            maxZoom: 19
+        }).addTo(map);
+
+        // Calculer les stats globales
+        const total = countries.reduce((sum, c) => sum + c.total, 0);
+        const allTypes = new Set();
+        countries.forEach(c => Object.keys(c.by_cert_type).forEach(t => allTypes.add(t)));
+
+        document.getElementById('global-total').textContent = total.toLocaleString();
+        document.getElementById('countries-count').textContent = countries.length;
+        document.getElementById('types-count').textContent = allTypes.size;
+
+        // Afficher top 10
+        const topCountries = countries.slice(0, 10);
+        const topHtml = topCountries.map((c, i) => `
+            <div class="country-item" onclick="showDetail('${c.country_code}')">
+                <span class="country-rank">${i + 1}</span>
+                <strong>${c.country_name}</strong>
+                <div style="margin-top: 0.25rem; color: #6b7280; font-size: 0.875rem;">
+                    ${c.total.toLocaleString()} certifications
+                </div>
+            </div>
+        `).join('');
+        document.getElementById('top-countries').innerHTML = topHtml;
+
+        // Ajouter les marqueurs
+        const maxTotal = Math.max(...countries.map(c => c.total));
+        countries.forEach(country => {
+            const size = Math.max(10, Math.sqrt((country.total / maxTotal) * 50000));
+            const ratio = country.total / maxTotal;
+            let color;
+            if (ratio > 0.7) color = '#99000d';
+            else if (ratio > 0.5) color = '#cb181d';
+            else if (ratio > 0.3) color = '#ef3b2c';
+            else if (ratio > 0.15) color = '#fb6a4a';
+            else if (ratio > 0.05) color = '#fc9272';
+            else color = '#fcbba1';
+
+            const marker = L.circleMarker([country.lat, country.lng], {
+                radius: size,
+                fillColor: color,
+                color: '#ffffff',
+                weight: 2,
+                opacity: 1,
+                fillOpacity: 0.7
+            }).addTo(map);
+
+            marker.bindTooltip(`
+                <div style="text-align: center;">
+                    <div style="font-weight: bold; margin-bottom: 0.25rem;">${country.country_name}</div>
+                    <div><strong>${country.total.toLocaleString()}</strong> certifications</div>
+                </div>
+            `);
+
+            marker.on('click', () => showDetail(country.country_code));
+        });
+
+        // Fonction pour afficher le détail
+        let currentChart = null;
+        function showDetail(code) {
+            const country = countries.find(c => c.country_code === code);
+            if (!country) return;
+
+            document.getElementById('detail-country-name').textContent = country.country_name;
+            document.getElementById('detail-country-code').textContent = country.country_code;
+            document.getElementById('detail-total').textContent = country.total.toLocaleString();
+
+            // Détruire le graphique précédent
+            if (currentChart) {
+                currentChart.destroy();
+            }
+
+            // Créer le graphique
+            const ctx = document.getElementById('detail-chart').getContext('2d');
+            const labels = Object.keys(country.by_cert_type);
+            const data = Object.values(country.by_cert_type);
+            const colors = ['#0369a1', '#ea580c', '#7c3aed', '#0891b2', '#be123c', '#4f46e5', '#15803d'];
+
+            currentChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: data,
+                        backgroundColor: colors.slice(0, labels.length),
+                        borderWidth: 2,
+                        borderColor: '#ffffff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: (context) => {
+                                    const value = context.parsed;
+                                    const total = data.reduce((a, b) => a + b, 0);
+                                    const percentage = ((value / total) * 100).toFixed(1);
+                                    return `${context.label}: ${value.toLocaleString()} (${percentage}%)`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            document.getElementById('detail-panel').classList.add('open');
+        }
+
+        function closeDetail() {
+            document.getElementById('detail-panel').classList.remove('open');
+        }
+    </script>
+</body>
+</html>
