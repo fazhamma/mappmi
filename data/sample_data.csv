@@ -1,0 +1,16 @@
+country_code,country_name,year,cert_type,active_count
+US,United States,2025,PMP,35000
+US,United States,2025,PMI-ACP,8000
+US,United States,2025,PMI-RMP,2000
+IN,India,2025,PMP,22000
+IN,India,2025,PMI-ACP,5000
+CN,China,2025,PMP,19500
+GB,United Kingdom,2025,PMP,9200
+CA,Canada,2025,PMP,8500
+DE,Germany,2025,PMP,6800
+FR,France,2025,PMP,2500
+FR,France,2025,PMI-ACP,800
+AU,Australia,2025,PMP,5900
+BR,Brazil,2025,PMP,4650
+JP,Japan,2025,PMP,4100
+SG,Singapore,2025,PMP,3500
